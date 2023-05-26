@@ -3,18 +3,23 @@ import { CreateUserDTO } from './dto/create-user.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { UpdatePutUserDTO } from './dto/update-put-user.dto';
 import { UpdatePatchUserDTO } from './dto/update-patch-user.dto';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UserService {
     constructor(private readonly prisma: PrismaService) {}
 
-    async create({email,name,password,birthAt}: CreateUserDTO) {
+    async create({email,name,password,birthAt, role}: CreateUserDTO) {
+
+        password = await bcrypt.hash(password, await bcrypt.genSalt());
+
         return await this.prisma.user.create({
             data: {
                 name,
                 email,
                 password,
-                birthAt: birthAt ? new Date(birthAt) : null
+                birthAt: birthAt ? new Date(birthAt) : null,
+                role
             }
         })
     }
@@ -37,6 +42,8 @@ export class UserService {
     async update(id: number, {birthAt,email,name,password}: UpdatePutUserDTO){
         
         await this.exists(id);
+
+        password = await bcrypt.hash(password, await bcrypt.genSalt());
 
         return await this.prisma.user.update({
             where:{id},
@@ -64,6 +71,10 @@ export class UserService {
             }
             
         })
+
+        if (dataBase.password) {
+            dataBase.password = await bcrypt.hash(dataBase.password, await bcrypt.genSalt());
+        }
         
         return await this.prisma.user.update({
             where:{id},
